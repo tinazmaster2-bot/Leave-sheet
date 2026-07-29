@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตารางลาหยุด</title>
+<style>
+  :root{
+    --bg: #F7F5F0;
+    --ink: #2A2D2C;
+    --ink-soft: #6B6F6D;
+    --line: #DFDAD0;
+    --weekday: #FFFFFF;
+    --weekend: #FCEFD8;
+    --weekend-line: #EAD6A8;
+    --accent: #0F6B62;
+    --accent-soft: #E4F0EE;
+    --leave: #D64545;
+    --leave-soft: #F8DCDC;
+    --off: #E3B341;
+    --off-soft: #FBF0D2;
+    --full: #B23A3A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family: "Sarabun","Noto Sans Thai","Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:100%;
+    padding:18px 14px 40px;
+  }
+  header.top{
+    margin-bottom:14px;
+  }
+  h1{
+    font-size:20px;
+    margin:0 0 4px;
+    letter-spacing:0.2px;
+  }
+  .sub{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0 0 8px;
+  }
+  .notice-list{
+    margin:0 0 4px;
+    padding-left:20px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    max-width:640px;
+  }
+  .notice-list li{
+    margin-bottom:2px;
+  }
+  .notice-list li::marker{
+    color:var(--accent);
+    font-weight:600;
+  }
+  .notice-sublist{
+    margin:3px 0 2px;
+    padding-left:18px;
+    list-style:disc;
+  }
+  .notice-sublist li{
+    margin-bottom:0;
+    color:var(--ink-soft);
+  }
+  .notice-sublist li::marker{
+    color:var(--ink-soft);
+    font-weight:400;
+  }
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 18px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 14px;
+    margin-bottom:12px;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,0.08);}
+  .info-bar{
+    min-height:20px;
+    font-size:13px;
+    color:var(--accent);
+    background:var(--accent-soft);
+    border:1px solid #C9E2DE;
+    border-radius:8px;
+    padding:8px 12px;
+    margin-bottom:12px;
+  }
+  .info-bar.empty{ color:var(--ink-soft); background:#fff; border-color:var(--line);}
+  .table-shell{
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:auto;
+    max-height:78vh;
+    background:#fff;
+  }
+  table{
+    border-collapse:separate;
+    border-spacing:0;
+    font-size:12.5px;
+    min-width:900px;
+  }
+  th,td{
+    border-bottom:1px solid var(--line);
+    border-right:1px solid var(--line);
+    padding:0;
+    text-align:center;
+    white-space:nowrap;
+  }
+  thead th{
+    position:sticky;
+    top:0;
+    background:var(--accent);
+    color:#fff;
+    font-weight:600;
+    padding:10px 6px;
+    z-index:3;
+    font-size:12.5px;
+  }
+  thead th.corner{
+    left:0;
+    z-index:5;
+    background:var(--accent);
+  }
+  th.date-col, td.date-col{
+    position:sticky;
+    left:0;
+    z-index:2;
+    background:#fff;
+    text-align:left;
+    padding:6px 10px;
+    min-width:118px;
+    font-weight:600;
+  }
+  thead th.date-col{z-index:6;}
+  tr.weekend td.date-col{background:var(--weekend);}
+  td.count-col{
+    min-width:56px;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:inherit;
+  }
+  tr.weekend td{background:var(--weekend);}
+  tr.weekday td{background:var(--weekday);}
+  td.count-col.full{color:var(--full);}
+  .day-badge{
+    font-size:10.5px;
+    font-weight:400;
+    color:var(--ink-soft);
+    display:block;
+  }
+  tr.weekend .day-badge{color:#9A6B1E;}
+  td.cell{
+    width:64px;
+    min-width:64px;
+    height:34px;
+    cursor:pointer;
+    transition:background .12s ease;
+  }
+  td.cell:hover{
+    outline:2px solid var(--accent);
+    outline-offset:-2px;
+  }
+  td.cell.mark-leave{
+    background:var(--leave) !important;
+    cursor:not-allowed;
+  }
+  td.cell.mark-off{
+    background:var(--off) !important;
+    cursor:not-allowed;
+  }
+  td.cell.mark-leave:hover, td.cell.mark-off:hover{
+    outline:none;
+  }
+  td.cell .dot{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:#fff;
+    margin:0 auto;
+  }
+  .loading{
+    padding:40px;
+    text-align:center;
+    color:var(--ink-soft);
+  }
+  .footer-note{
+    margin-top:10px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+  }
+  .leave-list-section{
+    margin-top:26px;
+  }
+  .leave-list-section h2{
+    font-size:15px;
+    margin:0 0 10px;
+  }
+  .list-empty{
+    font-size:13px;
+    color:var(--ink-soft);
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px;
+    text-align:center;
+  }
+  .list-shell{
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:auto;
+    max-height:340px;
+    background:#fff;
+  }
+  #leaveListTable{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    font-size:13px;
+  }
+  #leaveListTable th{
+    position:sticky;
+    top:0;
+    background:var(--accent);
+    color:#fff;
+    padding:9px 12px;
+    text-align:left;
+    font-weight:600;
+    z-index:1;
+  }
+  #leaveListTable td{
+    padding:8px 12px;
+    border-bottom:1px solid var(--line);
+    text-align:left;
+    white-space:nowrap;
+  }
+  #leaveListTable tbody tr:nth-child(odd){ background:#FBFAF7; }
+  #leaveListTable td.name-cell{ font-weight:600; }
+  #leaveListTable td.ts-cell{ color:var(--ink-soft); }
+
+  .top-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .admin-btn{
+    flex-shrink:0;
+    background:#fff;
+    color:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .admin-btn:hover{ background:var(--accent-soft); }
+  .admin-btn.active{
+    background:var(--accent);
+    color:#fff;
+  }
+  .admin-badge{
+    color:var(--accent);
+    font-weight:600;
+  }
+  .mode-selector{
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .mode-selector .mode-label{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-right:4px;
+  }
+  .mode-btn{
+    border:1.5px solid var(--line);
+    background:#fff;
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    color:var(--ink);
+  }
+  .mode-btn .dot-icon{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    display:inline-block;
+  }
+  .mode-btn.leave .dot-icon{ background:var(--leave); }
+  .mode-btn.off .dot-icon{ background:var(--off); }
+  .mode-btn.active.leave{ border-color:var(--leave); background:var(--leave-soft); }
+  .mode-btn.active.off{ border-color:var(--off); background:var(--off-soft); }
+  td.count-col.count-off{
+    color:#9A6B1E;
+  }
+  td.count-col.count-combined{
+    color:var(--accent);
+    font-weight:700;
+  }
+  body.admin-mode td.cell.mark-leave,
+  body.admin-mode td.cell.mark-off{
+    cursor:pointer;
+    position:relative;
+  }
+  body.admin-mode td.cell.mark-leave:hover,
+  body.admin-mode td.cell.mark-off:hover{
+    outline:2px solid var(--full);
+    outline-offset:-2px;
+  }
+
+  .modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(20,20,18,0.45);
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:16px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background:#fff;
+    border-radius:14px;
+    padding:20px;
+    max-width:340px;
+    width:100%;
+    box-shadow:0 12px 40px rgba(0,0,0,0.2);
+  }
+  .modal-box h3{
+    margin:0 0 8px;
+    font-size:16px;
+  }
+  .modal-box p{
+    margin:0 0 12px;
+    font-size:13.5px;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+  .modal-input-wrap input{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:14px;
+    font-family:inherit;
+    margin-bottom:6px;
+  }
+  .modal-input-wrap input:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+  }
+  .modal-error{
+    color:var(--full);
+    font-size:12.5px;
+    margin-bottom:8px;
+  }
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:6px;
+  }
+  .modal-btn{
+    border-radius:8px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+    border:1px solid transparent;
+  }
+  .modal-btn.secondary{
+    background:#fff;
+    border-color:var(--line);
+    color:var(--ink);
+  }
+  .modal-btn.primary{
+    background:var(--accent);
+    color:#fff;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="top-row">
+      <div>
+        <h1>ตารางลาหยุด</h1>
+        <p class="sub">1 ก.ย. 2569 – 31 พ.ค. 2570</p>
+        <ol class="notice-list">
+          <li>เมื่อกดลา/off เวรแล้ว ไม่สามารถแก้ไขได้ หากต้องการแก้ไขให้แจ้งติณณา</li>
+          <li>วันธรรมดา: รวม (ลา + off เวร) ไม่เกิน 6 คน/วัน</li>
+          <li>วันหยุด/นักขัตฤกษ์: รวม (ลา + off เวร) ไม่เกิน 5 คน/วัน
+            <ul class="notice-sublist">
+              <li>เท่ากับโควต้าลาเดี่ยว หมายความว่าถ้ามีคนลาครบ 5 แล้ว จะกด off เวร เพิ่มไม่ได้เลยในวันนั้น</li>
+            </ul>
+          </li>
+          <li>กรณีจำนวนคนลาหยุด/off เวร เกินที่กำหนดในแต่ละเดือน (หลังจากพี่วันแจ้ง) ใช้กฎ first come, first serve (อนุญาตให้ลา โดยนับตามลำดับการมาลงเวลาของวันลา ใครลงก่อนจะได้ลา)</li>
+          <li>หากมีการลาฉุกเฉิน (ภายใน 24 ชั่วโมงก่อนลา) กดลงวันลาแล้วแจ้งพี่วันและผู้ที่ทำตาราง activity เดือนนั้นๆ ไว้ด้วยเพื่อแก้ไข activity ในวันถัดไป</li>
+        </ol>
+      </div>
+      <button id="adminBtn" class="admin-btn">เข้าสู่โหมดแอดมิน</button>
+    </div>
+  </header>
+
+  <div class="mode-selector">
+    <span class="mode-label">เลือกโหมดก่อนกดในตาราง:</span>
+    <button id="modeLeaveBtn" class="mode-btn leave active"><span class="dot-icon"></span> กดลา</button>
+    <button id="modeOffBtn" class="mode-btn off"><span class="dot-icon"></span> กด off เวร</button>
+  </div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:#fff;border-color:#DFDAD0"></i> วันธรรมดา (ลาได้ ≤ 3 คน/วัน)</span>
+    <span><i class="swatch" style="background:#FCEFD8;border-color:#EAD6A8"></i> วันหยุด (เสาร์-อาทิตย์ และวันหยุดนักขัตฤกษ์) (ลาได้ ≤ 5 คน/วัน)</span>
+    <span><i class="swatch" style="background:#D64545"></i> ลาหยุดแล้ว</span>
+    <span><i class="swatch" style="background:#E3B341"></i> off เวร</span>
+    <span id="adminBadge" class="admin-badge" style="display:none;">🔓 โหมดแอดมิน: เปิดอยู่</span>
+  </div>
+
+  <div id="infoBar" class="info-bar empty">แตะที่ช่องเพื่อดูรายละเอียดเวลาที่บันทึกการลา</div>
+
+  <div class="table-shell">
+    <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+    <table id="sheet" style="display:none;"></table>
+  </div>
+
+  <p class="footer-note">หมายเหตุ: เลือกโหมด "กดลา" (สีแดง) หรือ "กด off เวร" (สีเหลือง) ก่อนกดในตาราง เมื่อกดแล้วจะไม่สามารถแก้ไข/ยกเลิกเองได้ ยกเว้นผู้ที่เข้าสู่โหมดแอดมิน (ต้องใส่รหัสผ่าน) โควต้าลาเดี่ยว 3 คน/วัน (วันธรรมดา) และ 5 คน/วัน (วันหยุด) ส่วนโควต้ารวม (ลา + off เวร) วันธรรมดาไม่เกิน 6 คน/วัน และวันหยุดไม่เกิน 5 คน/วัน เวลาที่บันทึกจะยึดตามเวลาที่กดครั้งแรกเสมอ ข้อมูลนี้แชร์ร่วมกันทุกคนที่เปิดตารางนี้</p>
+
+  <section class="leave-list-section">
+    <h2>รายชื่อผู้ลาหยุดทั้งหมด</h2>
+    <div id="leaveListEmpty" class="list-empty" style="display:none;">ยังไม่มีใครลงลาหยุด</div>
+    <div class="list-shell">
+      <table id="leaveListTable" style="display:none;">
+        <thead>
+          <tr><th>วันที่</th><th>วัน</th><th>ชื่อ</th><th>ประเภท</th><th>เวลาที่ลงลา</th></tr>
+        </thead>
+        <tbody id="leaveListBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modalTitle">หัวข้อ</h3>
+    <p id="modalMessage">ข้อความ</p>
+    <div id="modalInputWrap" class="modal-input-wrap" style="display:none;">
+      <input id="modalInput" type="password" placeholder="กรอกรหัสผ่าน" autocomplete="off">
+    </div>
+    <div id="modalError" class="modal-error" style="display:none;">รหัสผ่านไม่ถูกต้อง</div>
+    <div class="modal-actions">
+      <button id="modalCancelBtn" class="modal-btn secondary">ยกเลิก</button>
+      <button id="modalConfirmBtn" class="modal-btn primary">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const NAMES = ["ติณณา","ปรีณาพรรณ","ชยาวี","จิรกานต์","ณิชกานต์","ภูรินทร์","เกษราภรณ์","ปรเมศ","อภิชญา","นภัสกร"];
+const THAI_DAY = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+const THAI_MONTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
+const WEEKDAY_LIMIT = 3;
+const WEEKEND_LIMIT = 5;
+const WEEKDAY_COMBINED_LIMIT = 6;
+const WEEKEND_COMBINED_LIMIT = 5;
+
+function getLimits(dayOff){
+  return dayOff
+    ? { leave: WEEKEND_LIMIT, combined: WEEKEND_COMBINED_LIMIT }
+    : { leave: WEEKDAY_LIMIT, combined: WEEKDAY_COMBINED_LIMIT };
+}
+const STORAGE_KEY = "leave-data-v1";
+const ADMIN_PASSWORD = "290943";
+let isAdmin = false;
+let currentMode = "leave"; // "leave" | "off"
+
+// วันหยุดนักขัตฤกษ์ (ประกาศราชการ) ที่อยู่ในช่วง 1 ก.ย. 2569 - 31 พ.ค. 2570
+const HOLIDAYS = {
+  "2026-10-23": "วันปิยมหาราช",
+  "2026-12-05": "วันพ่อแห่งชาติ",
+  "2026-12-07": "ชดเชยวันพ่อแห่งชาติ",
+  "2026-12-10": "วันรัฐธรรมนูญ",
+  "2026-12-31": "วันสิ้นปี",
+  "2027-01-01": "วันขึ้นปีใหม่",
+  "2027-02-21": "วันมาฆบูชา",
+  "2027-02-22": "ชดเชยวันมาฆบูชา",
+  "2027-04-06": "วันจักรี",
+  "2027-04-13": "วันสงกรานต์",
+  "2027-04-14": "วันสงกรานต์",
+  "2027-04-15": "วันสงกรานต์",
+  "2027-05-01": "วันแรงงานแห่งชาติ",
+  "2027-05-03": "ชดเชยวันแรงงานแห่งชาติ",
+  "2027-05-20": "วันวิสาขบูชา"
+};
+
+function buildDates(){
+  const start = new Date(2026,8,1); // Sep 1 2026
+  const end = new Date(2027,4,31);  // May 31 2027
+  const out = [];
+  let d = new Date(start);
+  while(d <= end){
+    out.push(new Date(d));
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+const DATES = buildDates();
+
+function iso(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function isWeekend(d){ const w=d.getDay(); return w===0 || w===6; }
+function holidayName(d){ return HOLIDAYS[iso(d)] || null; }
+function isDayOff(d){ return isWeekend(d) || !!holidayName(d); }
+function thaiLabel(d){
+  const be = d.getFullYear()+543;
+  return `${d.getDate()} ${THAI_MONTH[d.getMonth()]} ${be}`;
+}
+function fmtTs(ts){
+  if(!ts) return "-";
+  const d = new Date(ts);
+  const be = d.getFullYear()+543;
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${d.getDate()} ${THAI_MONTH[d.getMonth()]} ${be} ${hh}:${mm} น.`;
+}
+
+let leaveData = {}; // { "YYYY-MM-DD": { "name": {status:'leave'|'off'|null, ts:string|null} } }
+
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    if(res && res.value){
+      leaveData = JSON.parse(res.value);
+    }
+  }catch(e){
+    leaveData = {};
+  }
+}
+
+async function saveData(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(leaveData), true);
+  }catch(e){
+    console.error("บันทึกข้อมูลไม่สำเร็จ", e);
+    alert("บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  }
+}
+
+function getEntry(dateKey, name){
+  if(!leaveData[dateKey]) leaveData[dateKey] = {};
+  if(!leaveData[dateKey][name]) leaveData[dateKey][name] = {status:null, ts:null};
+  return leaveData[dateKey][name];
+}
+
+function countByStatus(dateKey, status){
+  const row = leaveData[dateKey];
+  if(!row) return 0;
+  return NAMES.reduce((n,name)=> n + ((row[name] && row[name].status === status) ? 1 : 0), 0);
+}
+
+function setInfo(text, isEmpty){
+  const bar = document.getElementById("infoBar");
+  bar.textContent = text;
+  bar.classList.toggle("empty", !!isEmpty);
+}
+
+// ---------- Modal helpers ----------
+let pendingConfirm = null;
+const modalOverlay = ()=>document.getElementById("modalOverlay");
+
+function openModal({title, message, isPassword, confirmLabel}){
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalMessage").textContent = message;
+  document.getElementById("modalInputWrap").style.display = isPassword ? "block" : "none";
+  document.getElementById("modalError").style.display = "none";
+  document.getElementById("modalInput").value = "";
+  document.getElementById("modalConfirmBtn").textContent = confirmLabel || "ยืนยัน";
+  modalOverlay().classList.add("show");
+  if(isPassword){
+    setTimeout(()=> document.getElementById("modalInput").focus(), 50);
+  }
+}
+function closeModal(){
+  modalOverlay().classList.remove("show");
+  pendingConfirm = null;
+}
+function showModalError(msg){
+  const err = document.getElementById("modalError");
+  err.textContent = msg;
+  err.style.display = "block";
+}
+
+document.getElementById("modalCancelBtn").addEventListener("click", closeModal);
+document.getElementById("modalConfirmBtn").addEventListener("click", async ()=>{
+  const inputVal = document.getElementById("modalInput").value;
+  if(pendingConfirm){
+    const keepOpen = await pendingConfirm(inputVal);
+    if(!keepOpen) closeModal();
+  } else {
+    closeModal();
+  }
+});
+document.getElementById("modalInput").addEventListener("keydown", (e)=>{
+  if(e.key === "Enter") document.getElementById("modalConfirmBtn").click();
+});
+
+// ---------- Mark mode (leave / off-duty) ----------
+function updateModeUI(){
+  document.getElementById("modeLeaveBtn").classList.toggle("active", currentMode === "leave");
+  document.getElementById("modeOffBtn").classList.toggle("active", currentMode === "off");
+}
+document.getElementById("modeLeaveBtn").addEventListener("click", ()=>{
+  currentMode = "leave";
+  updateModeUI();
+});
+document.getElementById("modeOffBtn").addEventListener("click", ()=>{
+  currentMode = "off";
+  updateModeUI();
+});
+
+// ---------- Admin mode ----------
+function updateAdminUI(){
+  const btn = document.getElementById("adminBtn");
+  const badge = document.getElementById("adminBadge");
+  document.body.classList.toggle("admin-mode", isAdmin);
+  btn.textContent = isAdmin ? "ออกจากโหมดแอดมิน" : "เข้าสู่โหมดแอดมิน";
+  btn.classList.toggle("active", isAdmin);
+  badge.style.display = isAdmin ? "inline-flex" : "none";
+}
+
+document.getElementById("adminBtn").addEventListener("click", ()=>{
+  if(isAdmin){
+    isAdmin = false;
+    updateAdminUI();
+    setInfo("ออกจากโหมดแอดมินแล้ว", true);
+    return;
+  }
+  openModal({
+    title: "เข้าสู่โหมดแอดมิน",
+    message: "กรอกรหัสผ่านเพื่อแก้ไข/ยกเลิกรายการลาได้",
+    isPassword: true,
+    confirmLabel: "เข้าสู่ระบบ"
+  });
+  pendingConfirm = (val)=>{
+    if(val === ADMIN_PASSWORD){
+      isAdmin = true;
+      updateAdminUI();
+      setInfo("เข้าสู่โหมดแอดมินแล้ว สามารถแก้ไข/ยกเลิกรายการลาได้", false);
+      return false; // close modal
+    } else {
+      showModalError("รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่");
+      return true; // keep modal open
+    }
+  };
+});
+
+function statusLabel(status){
+  return status === "off" ? "off เวร" : "ลา";
+}
+
+function renderLeaveList(){
+  const rows = [];
+  Object.keys(leaveData).forEach(dateKey=>{
+    const dayRow = leaveData[dateKey];
+    NAMES.forEach(name=>{
+      const entry = dayRow[name];
+      if(entry && entry.status){
+        rows.push({dateKey, name, ts: entry.ts, status: entry.status});
+      }
+    });
+  });
+  rows.sort((a,b)=> a.dateKey === b.dateKey ? (a.ts||"").localeCompare(b.ts||"") : a.dateKey.localeCompare(b.dateKey));
+
+  const tbody = document.getElementById("leaveListBody");
+  const table = document.getElementById("leaveListTable");
+  const empty = document.getElementById("leaveListEmpty");
+
+  if(rows.length === 0){
+    table.style.display = "none";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+  table.style.display = "table";
+
+  tbody.innerHTML = rows.map(r=>{
+    const d = new Date(r.dateKey);
+    return `<tr>
+      <td>${thaiLabel(d)}</td>
+      <td>วัน${THAI_DAY[d.getDay()]}${holidayName(d) ? " · " + holidayName(d) : (isWeekend(d) ? " · วันหยุด" : "")}</td>
+      <td class="name-cell">${r.name}</td>
+      <td>${statusLabel(r.status)}</td>
+      <td class="ts-cell">${fmtTs(r.ts)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderTable(){
+  const table = document.getElementById("sheet");
+  const thead = document.createElement("thead");
+  const htr = document.createElement("tr");
+  htr.innerHTML = `<th class="corner date-col">วันที่</th><th>ลา</th><th>off เวร</th><th>รวม</th>` +
+    NAMES.map(n=>`<th>${n}</th>`).join("");
+  thead.appendChild(htr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  DATES.forEach(d=>{
+    const dateKey = iso(d);
+    const dayOff = isDayOff(d);
+    const hName = holidayName(d);
+    const limits = getLimits(dayOff);
+    const tr = document.createElement("tr");
+    tr.className = dayOff ? "weekend" : "weekday";
+    tr.dataset.date = dateKey;
+
+    const tdDate = document.createElement("td");
+    tdDate.className = "date-col";
+    const badgeText = hName ? ` · ${hName}` : (dayOff ? " · วันหยุด" : "");
+    tdDate.innerHTML = `${thaiLabel(d)}<span class="day-badge">วัน${THAI_DAY[d.getDay()]}${badgeText}</span>`;
+    tr.appendChild(tdDate);
+
+    const tdCount = document.createElement("td");
+    tdCount.className = "count-col";
+    tr.appendChild(tdCount);
+
+    const tdCountOff = document.createElement("td");
+    tdCountOff.className = "count-col count-off";
+    tr.appendChild(tdCountOff);
+
+    const tdCountCombined = document.createElement("td");
+    tdCountCombined.className = "count-col count-combined";
+    tr.appendChild(tdCountCombined);
+
+    NAMES.forEach(name=>{
+      const td = document.createElement("td");
+      td.className = "cell";
+      td.dataset.name = name;
+      td.addEventListener("click", ()=> onCellClick(dateKey, name, td, tr, tdCount, tdCountOff, tdCountCombined));
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  refreshAll();
+  renderLeaveList();
+  document.getElementById("loading").style.display = "none";
+  table.style.display = "table";
+}
+
+function refreshRowVisual(tr, tdCount, tdCountOff, tdCountCombined, dateKey, limits){
+  const leaveOn = countByStatus(dateKey, "leave");
+  const offOn = countByStatus(dateKey, "off");
+  const combined = leaveOn + offOn;
+  tdCount.textContent = `${leaveOn}/${limits.leave}`;
+  tdCount.classList.toggle("full", leaveOn >= limits.leave);
+  tdCountOff.textContent = `${offOn}`;
+  tdCountCombined.textContent = `${combined}/${limits.combined}`;
+  tdCountCombined.classList.toggle("full", combined >= limits.combined);
+
+  NAMES.forEach(name=>{
+    const td = tr.querySelector(`td.cell[data-name="${CSS.escape(name)}"]`);
+    const entry = getEntry(dateKey, name);
+    td.classList.toggle("mark-leave", entry.status === "leave");
+    td.classList.toggle("mark-off", entry.status === "off");
+    td.innerHTML = entry.status ? '<span class="dot"></span>' : '';
+  });
+}
+
+function refreshAll(){
+  document.querySelectorAll("#sheet tbody tr").forEach(tr=>{
+    const dateKey = tr.dataset.date;
+    const dayOff = tr.classList.contains("weekend");
+    const limits = getLimits(dayOff);
+    const tdCount = tr.querySelector("td.count-col:not(.count-off):not(.count-combined)");
+    const tdCountOff = tr.querySelector("td.count-col.count-off");
+    const tdCountCombined = tr.querySelector("td.count-col.count-combined");
+    refreshRowVisual(tr, tdCount, tdCountOff, tdCountCombined, dateKey, limits);
+  });
+}
+
+async function onCellClick(dateKey, name, td, tr, tdCount, tdCountOff, tdCountCombined){
+  const dayOff = tr.classList.contains("weekend");
+  const limits = getLimits(dayOff);
+  const entry = getEntry(dateKey, name);
+  const dateObj = new Date(dateKey);
+  const dayLabel = `${thaiLabel(dateObj)} (วัน${THAI_DAY[dateObj.getDay()]}${dayOff ? " วันหยุด" : ""})`;
+
+  if(entry.status){
+    const existingLabel = statusLabel(entry.status);
+    if(!isAdmin){
+      setInfo(`${name} • ${dayLabel} • ${existingLabel}ไว้แล้วตั้งแต่ ${fmtTs(entry.ts)} (ไม่สามารถแก้ไขได้ที่นี่)`, false);
+      return;
+    }
+    openModal({
+      title: "ยกเลิกรายการ",
+      message: `ยกเลิกรายการ "${existingLabel}" ของ ${name} วันที่ ${dayLabel} (ลงเวลาไว้เมื่อ ${fmtTs(entry.ts)}) ใช่หรือไม่?`,
+      isPassword: false,
+      confirmLabel: "ยืนยันยกเลิก"
+    });
+    pendingConfirm = async ()=>{
+      entry.status = null;
+      entry.ts = null;
+      refreshRowVisual(tr, tdCount, tdCountOff, tdCountCombined, dateKey, limits);
+      renderLeaveList();
+      setInfo(`ยกเลิกรายการ "${existingLabel}" ของ ${name} วันที่ ${dayLabel} แล้ว (โดยแอดมิน)`, false);
+      await saveData();
+      return false;
+    };
+    return;
+  }
+
+  const modeLabel = statusLabel(currentMode);
+  const leaveCount = countByStatus(dateKey, "leave");
+  const offCount = countByStatus(dateKey, "off");
+  const combinedCount = leaveCount + offCount;
+
+  let blockedReason = null;
+  if(currentMode === "leave" && leaveCount >= limits.leave){
+    blockedReason = `วันที่ ${dayLabel} มีคนลาครบ ${limits.leave} คนแล้ว (โควต้าลา)`;
+  } else if(combinedCount >= limits.combined){
+    blockedReason = `วันที่ ${dayLabel} มีคนหยุดรวม (ลา + off เวร) ครบ ${limits.combined} คนแล้ว (โควต้ารวม)`;
+  }
+
+  if(blockedReason){
+    if(!isAdmin){
+      setInfo(`เต็มโควต้าแล้ว: ${blockedReason}`, false);
+      return;
+    }
+    openModal({
+      title: "เกินโควต้าที่กำหนด",
+      message: `${blockedReason} ต้องการยืนยันให้ ${name} "${modeLabel}" เพิ่มหรือไม่?`,
+      isPassword: false,
+      confirmLabel: "ยืนยัน"
+    });
+    pendingConfirm = async ()=>{
+      entry.status = currentMode;
+      entry.ts = new Date().toISOString();
+      refreshRowVisual(tr, tdCount, tdCountOff, tdCountCombined, dateKey, limits);
+      renderLeaveList();
+      setInfo(`${name} • ${dayLabel} • ${modeLabel} • ลงเวลา: ${fmtTs(entry.ts)} (เกินโควต้า, บันทึกโดยแอดมิน)`, false);
+      await saveData();
+      return false;
+    };
+    return;
+  }
+
+  entry.status = currentMode;
+  entry.ts = new Date().toISOString();
+
+  refreshRowVisual(tr, tdCount, tdCountOff, tdCountCombined, dateKey, limits);
+  renderLeaveList();
+  setInfo(`${name} • ${dayLabel} • ${modeLabel} • ลงเวลา: ${fmtTs(entry.ts)}`, false);
+
+  await saveData();
+}
+
+(async function init(){
+  await loadData();
+  renderTable();
+})();
+</script>
+</body>
+</html>
